@@ -370,16 +370,16 @@ class model:
             self.integrate_mixed_layer()
 
     def update_model(self):
-        for variable, values in self.updated_vars.items():
+        for variable, values_dict in self.updated_vars.items():
             if variable not in vars(self):
                 sys.exit('Cannot update variable \"{}\"'.format(variable))
 
-            if values[0] == 'z':
-                setattr(self, variable, np.interp(self.h,         values[1], values[2]))
-            elif values[0] == 't':
-                setattr(self, variable, np.interp(self.t*self.dt, values[1], values[2]))
+            if values_dict['axis'] == 'z':
+                setattr(self, variable, np.interp(self.h,         values_dict['anchors'], values_dict['values']))
+            elif values_dict['axis'] == 't':
+                setattr(self, variable, np.interp(self.t*self.dt, values_dict['anchors'], values_dict['values']))
             else:
-                sys.exit('Axis \"{}\" should be \"t\" or \"z\"'.format(values[0]))
+                sys.exit('Axis \"{}\" should be \"t\" or \"z\"'.format(values_dict['axis']))
 
   
     def statistics(self):

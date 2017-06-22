@@ -113,8 +113,8 @@ wths  = 0.1 * np.sin(np.pi / run1input.runtime * time)
 z     = np.array([0, 1000, 1000.1, 5000])
 gamma = np.array([0.002, 0.002, 0.010, 0.010])
 
-run1input.updated_vars = {'gammatheta':['z',z,    gamma],
-                          'wtheta':    ['t',time, wths ]}
+run1input.updated_vars = {'gammatheta': {'axis':'z', 'anchors': z,    'values': gamma},
+                          'wtheta':     {'axis':'t', 'anchors': time, 'values': wths }}
 
 """
 Init and run the model
