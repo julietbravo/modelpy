@@ -166,7 +166,7 @@ class model:
         self.e          = None                  # mixed-layer vapor pressure [Pa]
         self.qsatsurf   = None                  # surface saturated specific humidity [g kg-1]
         self.dqsatdT    = None                  # slope saturated specific humidity curve [g kg-1 K-1]
-      
+
         # CO2
         fac = self.mair / (self.rho*self.mco2)  # Conversion factor mgC m-2 s-1 to ppm m s-1
         self.CO2        = self.input.CO2        # initial mixed-layer CO2 [ppm]
@@ -290,10 +290,14 @@ class model:
         self.M          = 0.                    # Cloud core mass flux [m s-1] 
         self.wqM        = 0.                    # Cloud core moisture flux [kg kg-1 m s-1] 
   
+        # Option to update variables during run
+        self.updated_vars = self.input.updated_vars
+
         # initialize time variables
-        self.tsteps = int(np.floor(self.input.runtime / self.input.dt))
-        self.dt     = self.input.dt
-        self.t      = 0
+        self.tsteps  = int(np.floor(self.input.runtime / self.input.dt))
+        self.runtime = self.input.runtime
+        self.dt      = self.input.dt
+        self.t       = 0
  
         # Some sanity checks for valid input
         if (self.c_beta is None): 
@@ -304,7 +308,11 @@ class model:
         self.out = model_output(self.tsteps)
  
         self.statistics()
-  
+
+        # Update variables
+        if(self.updated_vars is not None):
+            self.update_model()
+
         # calculate initial diagnostic variables
         if(self.sw_rad):
             self.run_radiation()
@@ -325,6 +333,10 @@ class model:
 
     def timestep(self):
         self.statistics()
+
+        # Update variables
+        if(self.updated_vars is not None):
+            self.update_model()
 
         # run radiation model
         if(self.sw_rad):
@@ -356,6 +368,19 @@ class model:
         # time integrate mixed-layer model
         if(self.sw_ml):
             self.integrate_mixed_layer()
+
+    def update_model(self):
+        for variable, values in self.updated_vars.items():
+            if variable not in vars(self):
+                sys.exit('Cannot update variable \"{}\"'.format(variable))
+
+            if values[0] == 'z':
+                setattr(self, variable, np.interp(self.h,         values[1], values[2]))
+            elif values[0] == 't':
+                setattr(self, variable, np.interp(self.t*self.dt, values[1], values[2]))
+            else:
+                sys.exit('Axis \"{}\" should be \"t\" or \"z\"'.format(values[0]))
+
   
     def statistics(self):
         # Calculate virtual temperatures 
@@ -425,7 +450,7 @@ class model:
         if(self.sw_fixft):
             w_th_ft  = self.gammatheta * self.ws
             w_q_ft   = self.gammaq     * self.ws
-            w_CO2_ft = self.gammaCO2   * self.ws 
+            w_CO2_ft = self.gammaCO2 * self.ws 
         else:
             w_th_ft  = 0.
             w_q_ft   = 0.
@@ -467,7 +492,7 @@ class model:
         self.dthetatend  = self.gammatheta * (self.we + self.wf - self.M) - self.thetatend + w_th_ft
         self.dqtend      = self.gammaq     * (self.we + self.wf - self.M) - self.qtend     + w_q_ft
         self.dCO2tend    = self.gammaCO2   * (self.we + self.wf - self.M) - self.CO2tend   + w_CO2_ft
-     
+    
         # assume u + du = ug, so ug - u = du
         if(self.sw_wind):
             self.utend       = -self.fc * self.dv + (self.uw + self.we * self.du)  / self.h + self.advu
@@ -1238,3 +1263,5 @@ class model_input:
         # Cumulus parameters
         self.sw_cu      = None  # Cumulus parameterization switch
         self.dz_h       = None  # Transition layer thickness [m]
+
+        self.updated_vars = None

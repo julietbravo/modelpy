@@ -104,6 +104,18 @@ run1input.c3c4       = 'c3'      # Plant type ('c3' or 'c4')
 run1input.sw_cu      = False     # Cumulus parameterization switch
 run1input.dz_h       = 150.      # Transition layer thickness [m]
 
+# Example of how to specify variables which change in height (e.g. lapse rates) or time (e.g. surface fluxes):
+# Surface fluxes, sinusoidal surface heat flux
+time  = np.linspace(0, run1input.runtime, 128)
+wths  = 0.1 * np.sin(np.pi / run1input.runtime * time)
+
+# Lapse rate, 2 K/km in the lowest 1 km, 10 K/km above
+z     = np.array([0, 1000, 1000.1, 5000])
+gamma = np.array([0.002, 0.002, 0.010, 0.010])
+
+run1input.updated_vars = {'gammatheta':['z',z,    gamma],
+                          'wtheta':    ['t',time, wths ]}
+
 """
 Init and run the model
 """
@@ -114,17 +126,23 @@ r1.run()
 Plot output
 """
 figure()
-subplot(131)
+subplot(221)
 plot(r1.out.t, r1.out.h)
 xlabel('time [h]')
 ylabel('h [m]')
 
-subplot(132)
+subplot(222)
 plot(r1.out.t, r1.out.theta)
 xlabel('time [h]')
 ylabel('theta [K]')
 
-subplot(133)
+subplot(223)
 plot(r1.out.t, r1.out.q*1000.)
 xlabel('time [h]')
 ylabel('q [g kg-1]')
+
+subplot(224)
+plot(r1.out.t, r1.out.wtheta)
+xlabel('time [h]')
+ylabel('wtheta [K m s-1]')
+
